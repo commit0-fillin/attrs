@@ -34,7 +34,12 @@ class VersionInfo:
         """
         Parse *s* and return a _VersionInfo.
         """
-        pass
+        parts = s.split('.')
+        if len(parts) < 3:
+            raise ValueError("Version string must have at least 3 components")
+        year, minor, micro = map(int, parts[:3])
+        releaselevel = parts[3] if len(parts) > 3 else "final"
+        return cls(year, minor, micro, releaselevel)
 
     def _ensure_tuple(self, other):
         """
@@ -43,7 +48,16 @@ class VersionInfo:
         Returns a possibly transformed *other* and ourselves as a tuple of
         the same length as *other*.
         """
-        pass
+        if not isinstance(other, tuple):
+            raise NotImplementedError(f"Cannot compare VersionInfo to {type(other)}")
+        
+        if len(other) > 4:
+            raise ValueError("Comparison tuple too long")
+        
+        self_tuple = (self.year, self.minor, self.micro, self.releaselevel)
+        other_tuple = other + (None,) * (4 - len(other))
+        
+        return self_tuple[:len(other)], other_tuple
 
     def __eq__(self, other):
         try:
