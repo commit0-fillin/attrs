@@ -47,15 +47,25 @@ class _AnnotationExtractor:
         """
         Return the type annotation of the first argument if it's not empty.
         """
-        pass
+        if self.sig is None:
+            return None
+        params = list(self.sig.parameters.values())
+        if not params:
+            return None
+        first_param = params[0]
+        return first_param.annotation if first_param.annotation != inspect.Parameter.empty else None
 
     def get_return_type(self):
         """
         Return the return type if it's not empty.
         """
-        pass
+        if self.sig is None:
+            return None
+        return self.sig.return_annotation if self.sig.return_annotation != inspect.Signature.empty else None
 repr_context = threading.local()
 
 def get_generic_base(cl):
     """If this is a generic class (A[str]), return the generic base for it."""
-    pass
+    if isinstance(cl, _GenericAlias):
+        return cl.__origin__
+    return None
