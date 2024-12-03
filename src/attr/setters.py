@@ -10,7 +10,11 @@ def pipe(*setters):
 
     .. versionadded:: 20.1.0
     """
-    pass
+    def pipe_setter(instance, attribute, value):
+        for setter in setters:
+            value = setter(instance, attribute, value)
+        return value
+    return pipe_setter
 
 def frozen(_, __, ___):
     """
@@ -18,7 +22,7 @@ def frozen(_, __, ___):
 
     .. versionadded:: 20.1.0
     """
-    pass
+    raise FrozenAttributeError("Can't set attribute: frozen")
 
 def validate(instance, attrib, new_value):
     """
@@ -26,7 +30,9 @@ def validate(instance, attrib, new_value):
 
     .. versionadded:: 20.1.0
     """
-    pass
+    if attrib.validator is not None:
+        attrib.validator(instance, attrib, new_value)
+    return new_value
 
 def convert(instance, attrib, new_value):
     """
@@ -35,5 +41,7 @@ def convert(instance, attrib, new_value):
 
     .. versionadded:: 20.1.0
     """
-    pass
+    if attrib.converter is not None:
+        return attrib.converter(new_value)
+    return new_value
 NO_OP = object()
