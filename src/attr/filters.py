@@ -7,7 +7,9 @@ def _split_what(what):
     """
     Returns a tuple of `frozenset`s of classes and attributes.
     """
-    pass
+    classes = frozenset(cls for cls in what if isinstance(cls, type))
+    attributes = frozenset(attr for attr in what if not isinstance(attr, type))
+    return classes, attributes
 
 def include(*what):
     """
@@ -24,7 +26,16 @@ def include(*what):
 
     .. versionchanged:: 23.1.0 Accept strings with field names.
     """
-    pass
+    classes, attributes = _split_what(what)
+
+    def include_filter(attribute, value):
+        return (
+            attribute.name in attributes
+            or attribute.__class__ in classes
+            or attribute in attributes
+        )
+
+    return include_filter
 
 def exclude(*what):
     """
@@ -41,4 +52,13 @@ def exclude(*what):
 
     .. versionchanged:: 23.3.0 Accept field name string as input argument
     """
-    pass
+    classes, attributes = _split_what(what)
+
+    def exclude_filter(attribute, value):
+        return not (
+            attribute.name in attributes
+            or attribute.__class__ in classes
+            or attribute in attributes
+        )
+
+    return exclude_filter
