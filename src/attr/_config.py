@@ -9,7 +9,8 @@ def set_run_validators(run):
         moved to new ``attrs`` namespace. Use `attrs.validators.set_disabled()`
         instead.
     """
-    pass
+    global _run_validators
+    _run_validators = run
 
 def get_run_validators():
     """
@@ -19,4 +20,4 @@ def get_run_validators():
         moved to new ``attrs`` namespace. Use `attrs.validators.get_disabled()`
         instead.
     """
-    pass
+    return _run_validators
