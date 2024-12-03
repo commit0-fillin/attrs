@@ -26,7 +26,7 @@ def set_disabled(disabled):
 
     .. versionadded:: 21.3.0
     """
-    pass
+    set_run_validators(not disabled)
 
 def get_disabled():
     """
@@ -37,7 +37,7 @@ def get_disabled():
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return not get_run_validators()
 
 @contextmanager
 def disabled():
@@ -50,7 +50,12 @@ def disabled():
 
     .. versionadded:: 21.3.0
     """
-    pass
+    old_run_validators = get_run_validators()
+    set_run_validators(False)
+    try:
+        yield
+    finally:
+        set_run_validators(old_run_validators)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _InstanceOfValidator:
@@ -81,7 +86,7 @@ def instance_of(type):
             With a human readable error message, the attribute (of type
             `attrs.Attribute`), the expected type, and the value it got.
     """
-    pass
+    return _InstanceOfValidator(type)
 
 @attrs(repr=False, frozen=True, slots=True)
 class _MatchesReValidator:
@@ -120,7 +125,19 @@ def matches_re(regex, flags=0, func=None):
     .. versionadded:: 19.2.0
     .. versionchanged:: 21.3.0 *regex* can be a pre-compiled pattern.
     """
-    pass
+    import re
+
+    if isinstance(regex, str):
+        regex = re.compile(regex, flags)
+    elif flags:
+        raise TypeError("'flags' can only be used with a string pattern")
+
+    if func is None:
+        func = regex.fullmatch
+    elif func not in (regex.fullmatch, regex.search, regex.match):
+        raise ValueError("'func' must be None, fullmatch, search, or match")
+
+    return _MatchesReValidator(regex, func)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _OptionalValidator:
@@ -149,7 +166,9 @@ def optional(validator):
     .. versionchanged:: 17.1.0 *validator* can be a list of validators.
     .. versionchanged:: 23.1.0 *validator* can also be a tuple of validators.
     """
-    pass
+    if isinstance(validator, (list, tuple)):
+        validator = and_(*validator)
+    return _OptionalValidator(validator)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _InValidator:
@@ -196,7 +215,9 @@ def in_(options):
        *options* that are a list, dict, or a set are now transformed into a
        tuple to keep the validator hashable.
     """
-    pass
+    if isinstance(options, (list, dict, set)):
+        options = tuple(options)
+    return _InValidator(options, options)
 
 @attrs(repr=False, slots=False, unsafe_hash=True)
 class _IsCallableValidator:
@@ -225,7 +246,7 @@ def is_callable():
             With a human readable error message containing the attribute
             (`attrs.Attribute`) name, and the value it got.
     """
-    pass
+    return _IsCallableValidator()
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _DeepIterable:
@@ -260,7 +281,7 @@ def deep_iterable(member_validator, iterable_validator=None):
 
     .. versionadded:: 19.1.0
     """
-    pass
+    return _DeepIterable(member_validator, iterable_validator)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _DeepMapping:
@@ -298,7 +319,7 @@ def deep_mapping(key_validator, value_validator, mapping_validator=None):
     Raises:
         TypeError: if any sub-validators fail
     """
-    pass
+    return _DeepMapping(key_validator, value_validator, mapping_validator)
 
 @attrs(repr=False, frozen=True, slots=True)
 class _NumberValidator:
@@ -329,7 +350,7 @@ def lt(val):
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return _NumberValidator(val, "<", operator.lt)
 
 def le(val):
     """
@@ -343,7 +364,7 @@ def le(val):
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return _NumberValidator(val, "<=", operator.le)
 
 def ge(val):
     """
@@ -357,21 +378,21 @@ def ge(val):
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return _NumberValidator(val, ">=", operator.ge)
 
 def gt(val):
     """
     A validator that raises `ValueError` if the initializer is called with a
     number smaller or equal to *val*.
 
-    The validator uses `operator.ge` to compare the values.
+    The validator uses `operator.gt` to compare the values.
 
     Args:
        val: Exclusive lower bound for values
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return _NumberValidator(val, ">", operator.gt)
 
 @attrs(repr=False, frozen=True, slots=True)
 class _MaxLengthValidator:
@@ -456,7 +477,7 @@ def _subclass_of(type):
             With a human readable error message, the attribute (of type
             `attrs.Attribute`), the expected type, and the value it got.
     """
-    pass
+    return _SubclassOfValidator(type)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _NotValidator:
@@ -504,7 +525,7 @@ def not_(validator, *, msg=None, exc_types=(ValueError, TypeError)):
 
     .. versionadded:: 22.2.0
     """
-    pass
+    return _NotValidator(validator, msg, exc_types)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _OrValidator:
@@ -543,4 +564,4 @@ def or_(*validators):
 
     .. versionadded:: 24.1.0
     """
-    pass
+    return _OrValidator(validators)
