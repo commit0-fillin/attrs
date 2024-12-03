@@ -48,13 +48,50 @@ def asdict(inst, recurse=True, filter=None, dict_factory=dict, retain_collection
     ..  versionadded:: 21.3.0
         If a dict has a collection for a key, it is serialized as a tuple.
     """
-    pass
+    attrs = fields(inst.__class__)
+    rv = dict_factory()
+    for a in attrs:
+        v = getattr(inst, a.name)
+        if filter is not None and not filter(a, v):
+            continue
+        if value_serializer is not None:
+            v = value_serializer(inst, a, v)
+        if recurse:
+            if has(v.__class__):
+                v = asdict(v, recurse=True, filter=filter, dict_factory=dict_factory,
+                           retain_collection_types=retain_collection_types,
+                           value_serializer=value_serializer)
+            elif isinstance(v, (tuple, list, set, frozenset)):
+                v = _asdict_anything(v, recurse, filter, dict_factory,
+                                     retain_collection_types, value_serializer)
+        rv[a.name] = v
+    return rv
 
-def _asdict_anything(val, is_key, filter, dict_factory, retain_collection_types, value_serializer):
+def _asdict_anything(val, recurse, filter, dict_factory, retain_collection_types, value_serializer):
     """
     ``asdict`` only works on attrs instances, this works on anything.
     """
-    pass
+    if isinstance(val, dict):
+        return dict_factory((
+            _asdict_anything(k, recurse, filter, dict_factory, retain_collection_types, value_serializer),
+            _asdict_anything(v, recurse, filter, dict_factory, retain_collection_types, value_serializer)
+        ) for k, v in val.items())
+    elif isinstance(val, (tuple, list, set, frozenset)):
+        if retain_collection_types is True:
+            cf = type(val)
+        else:
+            cf = list
+
+        return cf([
+            _asdict_anything(i, recurse, filter, dict_factory, retain_collection_types, value_serializer)
+            for i in val
+        ])
+    elif has(val.__class__):
+        return asdict(val, recurse=recurse, filter=filter, dict_factory=dict_factory,
+                      retain_collection_types=retain_collection_types,
+                      value_serializer=value_serializer)
+    else:
+        return val
 
 def astuple(inst, recurse=True, filter=None, tuple_factory=tuple, retain_collection_types=False):
     """
@@ -92,7 +129,21 @@ def astuple(inst, recurse=True, filter=None, tuple_factory=tuple, retain_collect
 
     ..  versionadded:: 16.2.0
     """
-    pass
+    attrs = fields(inst.__class__)
+    rv = []
+    for a in attrs:
+        v = getattr(inst, a.name)
+        if filter is not None and not filter(a, v):
+            continue
+        if recurse:
+            if has(v.__class__):
+                v = astuple(v, recurse=True, filter=filter, tuple_factory=tuple_factory,
+                            retain_collection_types=retain_collection_types)
+            elif isinstance(v, (tuple, list, set, frozenset, dict)):
+                v = _astuple_anything(v, recurse, filter, tuple_factory, retain_collection_types)
+        rv.append(v)
+    
+    return tuple_factory(rv)
 
 def has(cls):
     """
@@ -107,7 +158,9 @@ def has(cls):
     Returns:
         bool:
     """
-    pass
+    if not isinstance(cls, type):
+        raise TypeError("has() requires a class")
+    return hasattr(cls, "__attrs_attrs__")
 
 def assoc(inst, **changes):
     """
@@ -141,7 +194,16 @@ def assoc(inst, **changes):
         removed du to the slightly different approach compared to
         `attrs.evolve`, though.
     """
-    pass
+    import warnings
+    warnings.warn("assoc() is deprecated, use evolve() instead.", DeprecationWarning, stacklevel=2)
+
+    new_inst = copy.copy(inst)
+    attrs = fields(inst.__class__)
+    for attr_name, new_value in changes.items():
+        if not any(attr.name == attr_name for attr in attrs):
+            raise AttrsAttributeNotFoundError(f"Attribute {attr_name} not found")
+        setattr(new_inst, attr_name, new_value)
+    return new_inst
 
 def evolve(*args, **changes):
     """
@@ -176,7 +238,24 @@ def evolve(*args, **changes):
     .. versionchanged:: 24.1.0
        *inst* can't be passed as a keyword argument anymore.
     """
-    pass
+    if not args:
+        raise TypeError("evolve() missing 1 required positional argument: 'inst'")
+    inst = args[0]
+    if not has(inst.__class__):
+        raise NotAnAttrsClassError(f"{inst.__class__.__name__} is not an attrs-decorated class.")
+    
+    new_values = {}
+    for attr in fields(inst.__class__):
+        if attr.init:
+            try:
+                new_values[attr.name] = changes.pop(attr.name, getattr(inst, attr.name))
+            except AttributeError:
+                raise TypeError(f"Attribute {attr.name} doesn't exist or is not initializable.")
+    
+    if changes:
+        raise TypeError(f"got an unexpected keyword argument: {next(iter(changes))!r}")
+    
+    return inst.__class__(**new_values)
 
 def resolve_types(cls, globalns=None, localns=None, attribs=None, include_extras=True):
     """
@@ -227,4 +306,18 @@ def resolve_types(cls, globalns=None, localns=None, attribs=None, include_extras
     ..  versionadded:: 21.1.0 *attribs*
     ..  versionadded:: 23.1.0 *include_extras*
     """
-    pass
+    if not isinstance(cls, type):
+        raise TypeError("resolve_types() requires a class.")
+
+    if attribs is None:
+        if not has(cls):
+            raise NotAnAttrsClassError(f"{cls.__name__} is not an attrs-decorated class.")
+        attribs = fields(cls)
+
+    hints = typing.get_type_hints(cls, globalns=globalns, localns=localns, include_extras=include_extras)
+
+    for a in attribs:
+        if a.name in hints:
+            a.type = hints[a.name]
+
+    return cls
