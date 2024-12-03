@@ -419,7 +419,7 @@ def max_len(length):
 
     .. versionadded:: 21.3.0
     """
-    pass
+    return _MaxLengthValidator(length)
 
 @attrs(repr=False, frozen=True, slots=True)
 class _MinLengthValidator:
@@ -446,7 +446,7 @@ def min_len(length):
 
     .. versionadded:: 22.1.0
     """
-    pass
+    return _MinLengthValidator(length)
 
 @attrs(repr=False, slots=True, unsafe_hash=True)
 class _SubclassOfValidator:
