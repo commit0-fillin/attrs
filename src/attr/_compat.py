@@ -28,7 +28,9 @@ else:
         """
         Get annotations for *cls*.
         """
-        pass
+        if hasattr(cls, '__annotations__'):
+            return cls.__annotations__
+        return {}
 
 class _AnnotationExtractor:
     """
