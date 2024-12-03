@@ -96,20 +96,53 @@ def attrib(default=NOTHING, validator=None, repr=True, cmp=None, hash=None, init
     .. versionchanged:: 21.1.0 *cmp* undeprecated
     .. versionadded:: 22.2.0 *alias*
     """
-    pass
+    if factory is not None:
+        default = Factory(factory)
+
+    if cmp is not None and (eq is not None or order is not None):
+        raise ValueError("cmp and eq/order are mutually exclusive.")
+
+    if cmp is not None:
+        eq = order = cmp
+
+    return _CountingAttr(
+        default=default,
+        validator=validator,
+        repr=repr,
+        cmp=None,
+        hash=hash,
+        init=init,
+        metadata=metadata,
+        type=type,
+        converter=converter,
+        kw_only=kw_only,
+        eq=eq,
+        eq_key=None,
+        order=order,
+        order_key=None,
+        on_setattr=on_setattr,
+        alias=alias,
+    )
 
 def _compile_and_eval(script, globs, locs=None, filename=''):
     """
     Evaluate the script with the given global (globs) and local (locs)
     variables.
     """
-    pass
+    if locs is None:
+        locs = {}
+    
+    code = compile(script, filename, 'exec')
+    eval(code, globs, locs)
+    
+    return locs
 
 def _make_method(name, script, filename, globs, locals=None):
     """
     Create the method with the script given and return the method object.
     """
-    pass
+    locs = _compile_and_eval(script, globs, locals, filename)
+    return locs[name]
 
 def _make_attr_tuple_class(cls_name, attr_names):
     """
