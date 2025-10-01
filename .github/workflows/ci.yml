@@ -52,7 +52,7 @@ jobs:
           name: Packages
           path: dist
       - run: tar xf dist/*.tar.gz --strip-components=1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -115,7 +115,7 @@ jobs:
       - run: |
           tar xf dist/*.tar.gz --strip-components=1
           rm -rf src  # ensure tests run against wheel
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -141,7 +141,7 @@ jobs:
           name: Packages
           path: dist
       - run: tar xf dist/*.tar.gz --strip-components=1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version-default
       - uses: hynek/setup-cached-uv@v2
@@ -183,7 +183,7 @@ jobs:
           name: Packages
           path: dist
       - run: tar xf dist/*.tar.gz --strip-components=1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # Keep in sync with tox/docs and .readthedocs.yaml.
           python-version: "3.12"
@@ -197,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version-default
       - uses: hynek/setup-cached-uv@v2
@@ -211,7 +211,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version-default
       - uses: hynek/setup-cached-uv@v2
